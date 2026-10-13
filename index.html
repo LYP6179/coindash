@@ -68,7 +68,7 @@ button:active{transform:translateY(2px);box-shadow:0 2px 0 #080d20}
 
   <div class="panel" style="margin-top:18px">
     <h3 style="margin-top:0">🔒 PORTAL GURU</h3>
-    <p>Untuk guru sahaja. Log masuk menggunakan akaun Google yang dibenarkan untuk melihat markah dan jawapan murid.</p>
+    <p>Untuk guru sahaja. Log masuk menggunakan akaun Google yang dibenarkan untuk melihat ranking dan markah murid.</p>
     <button class="secondary" id="teacherLoginBtn" style="width:100%">LOG MASUK GURU GOOGLE</button>
     <p id="teacherStatus" style="font-size:.78rem;margin-bottom:0">Murid tidak perlu e-mel atau kata laluan untuk bermain.</p>
   </div>
@@ -164,7 +164,6 @@ async function saveCloudRecord(record) {
     name: String(record.name).slice(0, 40),
     score: Number(record.score) || 0,
     elapsed: Math.min(300, Math.max(0, Number(record.elapsed) || 0)),
-    answers: Array.isArray(record.answers) ? record.answers : [],
     createdAt: Number(record.createdAt) || Date.now()
   });
 }
@@ -190,11 +189,11 @@ async function loadTeacherRecords() {
       records.push({ uid: uidNode.key, id: runNode.key, ...runNode.val() });
     }));
   }
-  records.sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+  records.sort((a,b) => (Number(b.score) || 0) - (Number(a.score) || 0) || (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0));
   const host = document.getElementById("teacherRecords");
   if (!records.length) { host.innerHTML = "<p>No student records yet.</p>"; return; }
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  host.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr><th style="text-align:left;padding:8px">Student</th><th style="padding:8px">Score</th><th style="padding:8px">Time</th><th style="padding:8px">Answers</th><th style="padding:8px">Date</th></tr></thead><tbody>${records.map(r=>`<tr style="border-top:1px solid #344064"><td style="padding:8px">${esc(r.name)}</td><td style="text-align:center;padding:8px">${esc(r.score)}</td><td style="text-align:center;padding:8px">${esc(r.elapsed)}s</td><td style="padding:8px">${(Array.isArray(r.answers)?r.answers:[]).map(a=>`${esc(a.question)}<br><b>${esc(a.selected)}</b> — ${a.correct?"Correct":"Incorrect"}`).join("<hr style='border-color:#344064'>")}</td><td style="padding:8px">${r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</td></tr>`).join("")}</tbody></table>`;
+  host.innerHTML = `<h3 style="margin:0 0 10px">🏆 Ranking</h3><table style="width:100%;border-collapse:collapse;font-size:.9rem"><thead><tr><th style="text-align:center;padding:9px">Ranking</th><th style="text-align:left;padding:9px">Nama murid</th><th style="text-align:center;padding:9px">Markah</th></tr></thead><tbody>${records.map((r,i)=>`<tr style="border-top:1px solid #344064"><td style="text-align:center;padding:10px;font-weight:1000;color:${i<3?"var(--gold)":"var(--white)"}">${i+1}</td><td style="padding:10px;overflow-wrap:anywhere">${esc(r.name)}</td><td style="text-align:center;padding:10px;font-weight:1000;color:var(--gold)">${esc(r.score)}</td></tr>`).join("")}</tbody></table>`;
 }
 onAuthStateChanged(auth, user => {
   const status = document.getElementById("teacherStatus");
@@ -202,7 +201,7 @@ onAuthStateChanged(auth, user => {
 });
 (() => {
 const $ = id => document.getElementById(id);
-let player="",coins=0,score=0,hits=0,lane=1,elapsed=0,timeLimit=300,running=false,raf=0,lastFrame=0,lastCoin=0,lastObstacle=0,objects=[],nextQuizAt=45,quizIndex=0,quizCorrect=0,answerLog=[];
+let player="",coins=0,score=0,hits=0,lane=1,elapsed=0,timeLimit=300,running=false,raf=0,lastFrame=0,lastCoin=0,lastObstacle=0,objects=[],nextQuizAt=45,quizIndex=0,quizCorrect=0;
 const laneX=[25,50,75];
 function show(id){["home","game","results","teacherDashboard"].forEach(s=>$(s).classList.toggle("hidden",s!==id))}
 function fmt(t){t=Math.max(0,Math.ceil(t));return `${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`}
@@ -210,7 +209,7 @@ async function start(){
  try { await ensureStudentAuth(); } catch(err) { alert("Could not connect to the game server. Please reload and try again."); return; }
  player=$("playerName").value.trim().slice(0,18);
  if(!player){$("playerName").focus();$("playerName").placeholder="Please enter your name first!";return}
- coins=0;score=0;hits=0;lane=1;elapsed=0;timeLimit=300;running=true;objects=[];answerLog=[];lastCoin=0;lastObstacle=0;nextQuizAt=45;quizIndex=0;quizCorrect=0;lastFrame=performance.now();
+ coins=0;score=0;hits=0;lane=1;elapsed=0;timeLimit=300;running=true;objects=[];lastCoin=0;lastObstacle=0;nextQuizAt=45;quizIndex=0;quizCorrect=0;lastFrame=performance.now();
  $("coinVal").textContent="0";$("roundVal").textContent="0";$("timeVal").textContent="5:00";
  $("nameChip").textContent=player.toUpperCase();$("statusChip").textContent="RUNNING";
  $("runner").classList.remove("dash");$("runner").style.left="50%";
@@ -305,7 +304,7 @@ function openCheckpointQuiz(){
   $("checkpointQuestion").textContent=q.q;$("checkpointAnswers").innerHTML="";$("checkpointFeedback").textContent="";
   q.a.forEach((a,i)=>{const b=document.createElement("button");b.className="answer";b.textContent=String.fromCharCode(65+i)+". "+a;b.onclick=()=>{
    [...$("checkpointAnswers").children].forEach(x=>x.disabled=true);
-   answerLog.push({question:q.q,selected:a,correct:i===q.c,at:Math.round(elapsed)});if(i===q.c){quizCorrect++;b.classList.add("correct");$("checkpointFeedback").textContent="Betul! Bagus!";}
+   if(i===q.c){quizCorrect++;b.classList.add("correct");$("checkpointFeedback").textContent="Betul! Bagus!";}
    else{b.classList.add("wrong");$("checkpointAnswers").children[q.c].classList.add("correct");$("checkpointFeedback").textContent="Cuba lagi! Jawapan yang betul ditandakan.";}
    $("checkpointNext").classList.remove("hidden");$("checkpointNext").textContent=qi===2?"CONTINUE RUNNING →":"NEXT QUESTION →";
   };$("checkpointAnswers").appendChild(b)});
@@ -328,7 +327,7 @@ function finish(){
  if(!running)return;running=false;cancelAnimationFrame(raf);
  $("finalCoins").textContent=score;$("finalTime").textContent=fmt(elapsed);$("finalRounds").textContent=hits;
  $("resultMessage").textContent=`${player}, you scored ${score} points and collected ${coins} coins in ${fmt(elapsed)}!`;
- saveCloudRecord({name:player,score:score,elapsed:Math.round(elapsed),answers:answerLog,createdAt:Date.now()}).catch(err=>console.error("Could not save game record",err));show("results");
+ saveCloudRecord({name:player,score:score,elapsed:Math.round(elapsed),createdAt:Date.now()}).catch(err=>console.error("Could not save game record",err));show("results");
 }
 $("startBtn").addEventListener("click",start);$("againBtn").addEventListener("click",()=>{show("home");$("playerName").value=player});$("leftBtn").addEventListener("click",()=>move(-1));$("rightBtn").addEventListener("click",()=>move(1));$("teacherLoginBtn").addEventListener("click", async () => {
  try { $("teacherStatus").textContent="Signing in…"; await teacherLogin(); $("teacherEmailLabel").textContent="Signed in as "+auth.currentUser.email; show("teacherDashboard"); $("teacherStatus").textContent="Teacher signed in."; }
