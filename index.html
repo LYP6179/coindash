@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Coin Dash — Catch & Dodge</title>
+<style>
+:root{--navy:#11162c;--panel:#1b2341;--cyan:#62f4e4;--gold:#ffd45a;--pink:#ff6b9e;--white:#f7f8ff;--muted:#aeb9d9;--green:#8cff8c}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#101329;color:var(--white);font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif}
+body{display:flex;justify-content:center}.app{width:min(100%,520px);padding:10px 12px 22px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 12px}.logo{font-weight:1000;letter-spacing:.08em;font-size:1.08rem}.logo span{color:var(--gold)}.tag{font-size:.72rem;border:1px solid #3a456c;border-radius:99px;padding:6px 9px;color:var(--cyan)}
+h1{font-size:clamp(2.2rem,9vw,4.3rem);line-height:.92;margin:12px 0 10px;letter-spacing:-.05em}h1 em{font-style:normal;color:var(--gold)}p{color:var(--muted);line-height:1.5}.panel{background:linear-gradient(145deg,#20294b,#171d37);border:1px solid #344064;border-radius:20px;padding:17px;margin:12px 0;box-shadow:0 10px 30px #070a1a55}
+label{display:block;font-size:.84rem;color:var(--muted);margin:13px 0 6px}input{width:100%;font:inherit;font-size:1rem;color:var(--white);background:#0e142a;border:1px solid #48567f;border-radius:12px;padding:13px 14px;outline:none}input:focus{border-color:var(--cyan)}
+button{border:0;border-radius:13px;padding:12px 15px;font:inherit;font-weight:900;color:#10152b;background:var(--gold);cursor:pointer;touch-action:manipulation}button:active{transform:scale(.98)}button:disabled{opacity:.4;cursor:not-allowed}.primary{width:100%;margin-top:15px;background:var(--cyan)}.secondary{background:#303b61;color:var(--white)}.hidden{display:none!important}
+.hud{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.metric{background:#0d142a;border:1px solid #303b60;border-radius:13px;padding:10px;text-align:center}.metric strong{display:block;font-size:1.28rem;color:var(--gold);font-variant-numeric:tabular-nums}.metric small{color:var(--muted);font-size:.68rem;letter-spacing:.07em}
+.scene{position:relative;overflow:hidden;height:min(58vh,560px);min-height:360px;border-radius:18px;border:1px solid #435078;background:linear-gradient(#252b55 0%,#48518a 43%,#f5a66c 44%,#3b4765 45%,#19233e 100%);isolation:isolate}
+.sun{position:absolute;width:65px;height:65px;border-radius:50%;background:#ffda7b;top:10%;left:calc(50% - 32px);box-shadow:0 0 50px #ffcb6d88}
+.city{position:absolute;inset:23% 0 45%;display:flex;align-items:end;justify-content:space-around;opacity:.95}.building{background:#30375d;border-top:7px solid #6a709b;width:12%;height:var(--h);position:relative}.building:after{content:"";position:absolute;inset:12px 5px;background:repeating-linear-gradient(90deg,#ffc96b 0 4px,transparent 4px 11px),repeating-linear-gradient(0deg,transparent 0 12px,#ffc96b 12px 16px);opacity:.65}
+.track{position:absolute;inset:43% -20% -12%;background:linear-gradient(90deg,#303a56,#59637a 48%,#303a56);clip-path:polygon(42% 0,58% 0,100% 100%,0 100%);z-index:1}
+.laneLine{position:absolute;top:45%;bottom:-10%;width:3px;background:#b9c8d7aa;z-index:2;transform-origin:top;left:50%}.laneLine.left{transform:rotate(13deg)}.laneLine.right{transform:rotate(-13deg)}
+.sleepers{position:absolute;inset:45% 0 -5%;z-index:2;background:repeating-linear-gradient(0deg,transparent 0 22px,#9ba6b8 23px 27px,transparent 28px 44px);clip-path:polygon(42% 0,58% 0,100% 100%,0 100%);opacity:.5}
+.runner{position:absolute;z-index:5;left:50%;bottom:12%;width:58px;height:76px;transform:translateX(-50%);transition:left .13s,bottom .12s;filter:drop-shadow(0 8px 5px #1118)}
+.botHead{position:absolute;left:8px;top:0;width:42px;height:35px;background:#6ef0dc;border:4px solid #17223d;border-radius:12px 12px 8px 8px}.botHead:before{content:"";position:absolute;left:6px;top:8px;width:7px;height:8px;background:#17223d;box-shadow:17px 0 #17223d}.botBody{position:absolute;left:14px;top:34px;width:30px;height:28px;border:4px solid #17223d;background:#ffcb54;border-radius:7px}.leg{position:absolute;top:57px;width:12px;height:17px;background:#ff6b9e;border:3px solid #17223d;border-radius:4px}.leg.l{left:13px}.leg.r{right:13px}.runner.jump{bottom:28%}.runner.dash{filter:drop-shadow(0 0 12px #62f4e4);animation:dash .2s infinite alternate}@keyframes dash{to{transform:translateX(-50%) scale(1.12)}}
+.coin{position:absolute;z-index:4;width:22px;height:22px;border-radius:50%;border:4px solid #fff0a0;background:#ffb92e;box-shadow:0 0 12px #ffd45a88;animation:spin 1s linear infinite}.coin:after{content:"";position:absolute;inset:4px;border:2px solid #fff1a7;border-radius:50%}.rock,.rubbish{position:absolute;z-index:6;display:block;opacity:1;box-shadow:0 4px 8px #090d20aa,inset 0 5px #ffffff66}.rock{background:#9da8bb;border:3px solid #39435e;border-radius:45% 35% 40% 30%}.rubbish{background:#83d18b;border:3px solid #24543d;border-radius:5px 5px 2px 2px}.rubbish:after{content:"";position:absolute;left:4px;right:4px;top:7px;height:4px;background:#d6ffb9;border-radius:3px}@keyframes spin{50%{transform:rotateY(70deg) scale(.8)}}
+.obstacle{position:absolute;z-index:4;width:35px;height:48px;background:#ff668b;border:4px solid #17223d;border-radius:7px 7px 3px 3px;box-shadow:inset 0 8px #ff9cb6}
+.sceneCaption{position:absolute;z-index:8;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;gap:8px;font-size:.7rem;font-weight:900;letter-spacing:.06em}.chip{padding:7px 9px;background:#11162cbf;border:1px solid #ffffff22;border-radius:99px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.controls button{min-height:62px;font-size:1.05rem}
+.progressWrap{height:8px;background:#0b1024;border-radius:99px;overflow:hidden;margin:10px 0}.progress{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--gold));transition:width .2s}
+.modal{position:fixed;inset:0;background:#080b1bdc;z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.quiz{width:min(100%,540px);max-height:90vh;overflow:auto;background:#1a2140;border:1px solid #53618c;border-radius:22px;padding:20px;box-shadow:0 20px 80px #0009}.quiz h2{margin:4px 0 6px;font-size:1.6rem}.quizTop{display:flex;justify-content:space-between;align-items:center;gap:10px}.questionCount{color:var(--cyan);font-size:.8rem;font-weight:900}.question{font-size:1.13rem;font-weight:900;line-height:1.4;margin:18px 0 12px}.answers{display:grid;gap:8px}.answer{width:100%;text-align:left;background:#293457;color:var(--white);border:1px solid #46547c;padding:13px}.answer.correct{background:#214b49;border-color:var(--green)}.answer.wrong{background:#542c46;border-color:var(--pink)}.feedback{min-height:25px;color:var(--gold);font-weight:800;margin:12px 0}.resultIcon{font-size:3rem}.rankingRow{display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid #344064}.rankingRow:first-child{color:var(--gold)}.rankNum{font-weight:1000;font-size:1.3rem;width:32px}.rankName{flex:1;font-weight:800;overflow-wrap:anywhere}.rankCoins{font-weight:1000;color:var(--gold)}
+.footer{text-align:center;color:#68769e;font-size:.7rem;margin:20px 0 5px}
+@media(min-width:700px){.app{width:min(100%,480px)}.scene{height:560px}.controls{max-width:100%;margin-left:auto;margin-right:auto}}.scene{height:450px}.controls{max-width:420px;margin-left:auto;margin-right:auto}}
+
+/* Pixel-art classroom theme */
+:root{--navy:#172044;--panel:#25345e;--cyan:#7df9e8;--gold:#ffe066;--pink:#ff7b9c;--white:#fff9e8;--muted:#c5d3ee;--green:#9cff9c}
+body{font-family:ui-monospace,"Courier New",monospace;background:#111a36;background-image:radial-gradient(#33436d 1px,transparent 1px);background-size:8px 8px}
+.panel,.quiz,.metric,.scene{border-radius:5px;box-shadow:5px 5px 0 #070c20;border-width:3px}
+button,input,.tag,.chip{border-radius:3px}
+button{box-shadow:0 4px 0 #080d20;image-rendering:pixelated}
+button:active{transform:translateY(2px);box-shadow:0 2px 0 #080d20}
+.scene{background:linear-gradient(#273e70 0%,#526ba0 42%,#ffbf72 43%,#5b6680 44%,#202d50 100%);image-rendering:pixelated}
+.sun{border-radius:0;box-shadow:8px 8px 0 #f39d58;width:48px;height:48px;left:calc(50% - 24px)}
+.botHead{border-radius:3px;background:#7df9e8;box-shadow:inset 0 0 0 4px #4bcbbd}
+.botBody{border-radius:2px}.leg{border-radius:1px}
+.coin{border-radius:2px;box-shadow:3px 3px 0 #a96a24;animation:spin 1s steps(4) infinite}
+.rock{clip-path:polygon(20% 0,80% 0,100% 30%,90% 80%,60% 100%,10% 90%,0 35%);border-radius:0!important}
+.rubbish{border-radius:0!important}
+.quiz h2{font-family:ui-monospace,"Courier New",monospace;text-transform:uppercase;color:var(--gold)}
+.answer{border-radius:3px}
+
+</style>
+</head>
+<body><main class="app">
+<header><div class="logo">⚡ COIN <span>DASH</span></div><div class="tag">OLAHRAGA QUEST</div></header>
+<section id="home">
+  <h1>LARI PANTAS.<br><em>FIKIR PANTAS!</em></h1>
+  <p>Kutip syiling, elak halangan dan jawab soalan pengetahuan Olahraga. Sejauh manakah anda boleh pergi dalam 5 minit?</p>
+  <div class="panel">
+    <label for="playerName">MASUKKAN NAMA ANDA</label>
+    <input id="playerName" maxlength="18" autocomplete="nickname" placeholder="e.g. SUPER CAT">
+    <button class="primary" id="startBtn">MULA BERLARI ▶</button>
+    <p style="font-size:.78rem;margin-bottom:0">Permainan solo · Telefon menegak · Tidak perlu log masuk</p>
+  </div>
+  <div class="panel">
+    <h3 style="margin-top:0">🏁 CARA BERMAIN</h3>
+    <p>◀ ▶ Bergerak ke kiri dan kanan untuk mengutip syiling serta mengelak batu dan sampah.</p>
+    <p>Setiap syiling bernilai <b style="color:var(--gold)">+10 mata</b>. Terlanggar batu atau sampah akan menolak <b style="color:var(--pink)">−2 mata</b>. Objek semakin laju. Bermain sehingga 5 minit! Setiap 45 saat, jawab 3 soalan Olahraga.</p>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <h3 style="margin-top:0">🔒 PORTAL GURU</h3>
+    <p>Untuk guru sahaja. Log masuk menggunakan akaun Google yang dibenarkan untuk melihat markah dan jawapan murid.</p>
+    <button class="secondary" id="teacherLoginBtn" style="width:100%">LOG MASUK GURU GOOGLE</button>
+    <p id="teacherStatus" style="font-size:.78rem;margin-bottom:0">Murid tidak perlu e-mel atau kata laluan untuk bermain.</p>
+  </div>
+</section>
+<section id="teacherDashboard" class="hidden">
+  <div class="panel">
+    <h2 style="margin-top:0">Teacher Dashboard</h2>
+    <p id="teacherEmailLabel"></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="refreshTeacherBtn" class="secondary">Refresh records</button>
+      <button id="teacherLogoutBtn" class="secondary">Sign out</button>
+    </div>
+    <div id="teacherRecords" style="overflow-x:auto;margin-top:14px"></div>
+  </div>
+  <button id="backToGameBtn" class="secondary" style="width:100%">Back to game home</button>
+</section>
+<section id="game" class="hidden">
+  <div class="hud">
+    <div class="metric"><strong id="timeVal">5:00</strong><small>TIME LEFT</small></div>
+    <div class="metric"><strong id="coinVal">0</strong><small>SCORE</small></div>
+    <div class="metric"><strong id="roundVal">0</strong><small>HITS</small></div>
+  </div>
+  <div class="scene" id="scene">
+    <div class="sun"></div>
+    <div class="city"><div class="building" style="--h:60%"></div><div class="building" style="--h:85%"></div><div class="building" style="--h:50%"></div><div class="building" style="--h:72%"></div><div class="building" style="--h:94%"></div><div class="building" style="--h:58%"></div><div class="building" style="--h:76%"></div></div>
+    <div class="track"></div><div class="laneLine left"></div><div class="laneLine right"></div><div class="sleepers"></div>
+    <div class="sceneCaption"><span class="chip" id="nameChip">RUNNER</span><span class="chip" id="statusChip">RUNNING</span></div>
+    <div class="runner" id="runner"><div class="botHead"></div><div class="botBody"></div><div class="leg l"></div><div class="leg r"></div></div>
+  </div>
+  <div class="progressWrap"><div class="progress" id="progress"></div></div>
+  <div class="controls" style="grid-template-columns:1fr 1fr"><button class="secondary" id="leftBtn">◀ LEFT</button><button class="secondary" id="rightBtn">RIGHT ▶</button></div><p style="text-align:center;font-size:.76rem">Move left and right to catch coins and avoid falling rocks and rubbish.</p>
+</section>
+<section id="results" class="hidden">
+  <div class="panel" style="text-align:center">
+    <div class="resultIcon">🏆</div><h1 style="font-size:2.5rem">RUN COMPLETE!</h1>
+    <p id="resultMessage">Great run!</p>
+    <div class="hud">
+      <div class="metric"><strong id="finalCoins">0</strong><small>POINTS</small></div>
+      <div class="metric"><strong id="finalTime">0:00</strong><small>TIME RAN</small></div>
+      <div class="metric"><strong id="finalRounds">0</strong><small>HITS</small></div>
+    </div>
+    <button class="primary" id="againBtn">RUN AGAIN ↻</button>
+  </div></section>
+<div class="footer">COIN DASH · OLAHRAGA · BELAJAR SAMBIL BERMAIN</div>
+</main>
+
+<div class="modal hidden" id="checkpointModal" role="dialog" aria-modal="true">
+ <div class="quiz">
+  <div class="quizTop"><span class="tag" id="checkpointTime">0:45 elapsed</span><span class="questionCount" id="checkpointCount">QUESTION 1/3</span></div>
+  <h2 id="checkpointTitle">QUICK CHECK!</h2>
+  <div class="question" id="checkpointQuestion"></div>
+  <div class="answers" id="checkpointAnswers"></div>
+  <div class="feedback" id="checkpointFeedback"></div>
+  <button class="primary hidden" id="checkpointNext">NEXT QUESTION →</button>
+ </div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCwjpzA73WRExre70t6_dW8-yr3WjqwGKM",
+  authDomain: "coin-dash-classroom.firebaseapp.com",
+  databaseURL: "https://coin-dash-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "coin-dash-classroom",
+  storageBucket: "coin-dash-classroom.firebasestorage.app",
+  messagingSenderId: "212897727539",
+  appId: "1:212897727539:web:7159a0c622d8002f6d8f46",
+  measurementId: "G-2BLJPB5411"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getDatabase(firebaseApp);
+const TEACHER_EMAIL = "leeyeeping6179@gmail.com";
+let currentAuthReady = signInAnonymously(auth).catch(err => {
+  console.error("Anonymous sign-in failed", err);
+  const status = document.getElementById("teacherStatus");
+  if (status) status.textContent = "Connection setup failed. Please reload and try again.";
+  throw err;
+});
+async function ensureStudentAuth() {
+  if (auth.currentUser && auth.currentUser.isAnonymous) return auth.currentUser;
+  await currentAuthReady;
+  if (auth.currentUser?.isAnonymous) return auth.currentUser;
+  const credential = await signInAnonymously(auth);
+  return credential.user;
+}
+async function saveCloudRecord(record) {
+  const user = await ensureStudentAuth();
+  const sessionId = "run_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
+  await set(ref(db, `studentRecords/${user.uid}/${sessionId}`), {
+    name: String(record.name).slice(0, 40),
+    score: Number(record.score) || 0,
+    elapsed: Math.min(300, Math.max(0, Number(record.elapsed) || 0)),
+    answers: Array.isArray(record.answers) ? record.answers : [],
+    createdAt: Number(record.createdAt) || Date.now()
+  });
+}
+async function teacherLogin() {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const result = await signInWithPopup(auth, provider);
+  if (result.user.email !== TEACHER_EMAIL || !result.user.emailVerified) {
+    await signOut(auth);
+    throw new Error("This Google account is not authorised for the teacher dashboard.");
+  }
+  await loadTeacherRecords();
+}
+async function loadTeacherRecords() {
+  const user = auth.currentUser;
+  if (!user || user.email !== TEACHER_EMAIL || !user.emailVerified) {
+    throw new Error("Please sign in with the authorised teacher Google account.");
+  }
+  const snap = await get(ref(db, "studentRecords"));
+  const records = [];
+  if (snap.exists()) {
+    snap.forEach(uidNode => uidNode.forEach(runNode => {
+      records.push({ uid: uidNode.key, id: runNode.key, ...runNode.val() });
+    }));
+  }
+  records.sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const host = document.getElementById("teacherRecords");
+  if (!records.length) { host.innerHTML = "<p>No student records yet.</p>"; return; }
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  host.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr><th style="text-align:left;padding:8px">Student</th><th style="padding:8px">Score</th><th style="padding:8px">Time</th><th style="padding:8px">Answers</th><th style="padding:8px">Date</th></tr></thead><tbody>${records.map(r=>`<tr style="border-top:1px solid #344064"><td style="padding:8px">${esc(r.name)}</td><td style="text-align:center;padding:8px">${esc(r.score)}</td><td style="text-align:center;padding:8px">${esc(r.elapsed)}s</td><td style="padding:8px">${(Array.isArray(r.answers)?r.answers:[]).map(a=>`${esc(a.question)}<br><b>${esc(a.selected)}</b> — ${a.correct?"Correct":"Incorrect"}`).join("<hr style='border-color:#344064'>")}</td><td style="padding:8px">${r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</td></tr>`).join("")}</tbody></table>`;
+}
+onAuthStateChanged(auth, user => {
+  const status = document.getElementById("teacherStatus");
+  if (status && user?.email === TEACHER_EMAIL && user.emailVerified) status.textContent = "Authorised teacher account signed in.";
+});
+(() => {
+const $ = id => document.getElementById(id);
+let player="",coins=0,score=0,hits=0,lane=1,elapsed=0,timeLimit=300,running=false,raf=0,lastFrame=0,lastCoin=0,lastObstacle=0,objects=[],nextQuizAt=45,quizIndex=0,quizCorrect=0,answerLog=[];
+const laneX=[25,50,75];
+function show(id){["home","game","results","teacherDashboard"].forEach(s=>$(s).classList.toggle("hidden",s!==id))}
+function fmt(t){t=Math.max(0,Math.ceil(t));return `${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`}
+async function start(){
+ try { await ensureStudentAuth(); } catch(err) { alert("Could not connect to the game server. Please reload and try again."); return; }
+ player=$("playerName").value.trim().slice(0,18);
+ if(!player){$("playerName").focus();$("playerName").placeholder="Please enter your name first!";return}
+ coins=0;score=0;hits=0;lane=1;elapsed=0;timeLimit=300;running=true;objects=[];answerLog=[];lastCoin=0;lastObstacle=0;nextQuizAt=45;quizIndex=0;quizCorrect=0;lastFrame=performance.now();
+ $("coinVal").textContent="0";$("roundVal").textContent="0";$("timeVal").textContent="5:00";
+ $("nameChip").textContent=player.toUpperCase();$("statusChip").textContent="RUNNING";
+ $("runner").classList.remove("dash");$("runner").style.left="50%";
+ $("scene").querySelectorAll(".coin,.rock,.rubbish").forEach(n=>n.remove());
+ show("game");cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);
+}
+function move(dir){if(!running)return;lane=Math.max(0,Math.min(2,lane+dir));$("runner").style.left=laneX[lane]+"%"}
+function spawn(type){
+ const laneN=Math.floor(Math.random()*3),el=document.createElement("div");
+ el.className=type;el.dataset.lane=laneN;
+ // Set positioning inline as well as in CSS, avoiding stylesheet/layout conflicts.
+ el.style.position="absolute";
+ el.style.display="block";
+ el.style.visibility="visible";
+ el.style.opacity="1";
+ el.style.zIndex=type==="coin"?"7":"9";
+ el.style.left=`calc(${laneX[laneN]}% - ${type==="coin"?11:18}px)`;
+ el.style.top="-55px";
+ el.style.pointerEvents="none";
+ if(type==="coin"){
+   el.style.width="22px";el.style.height="22px";
+ } else {
+   el.style.width="36px";el.style.height=type==="rock"?"36px":"42px";
+   el.style.background=type==="rock"?"linear-gradient(145deg,#e1e6ef 0%,#929eb2 45%,#58647a 100%)":"linear-gradient(145deg,#b4f7a6 0%,#53b96c 55%,#237646 100%)";
+   el.style.border="3px solid #17223d";
+   el.style.borderRadius=type==="rock"?"48% 35% 42% 30%":"5px 5px 3px 3px";
+   el.style.boxShadow="0 5px 8px #090d20aa,inset 0 4px 0 #ffffff88";
+   if(type==="rock"){el.textContent="";el.style.clipPath="polygon(18% 0,76% 4%,100% 40%,83% 91%,38% 100%,0 62%)";}
+   else {
+     el.style.borderTopWidth="5px";
+     el.style.borderTopColor="#24543d";
+     el.style.backgroundImage="linear-gradient(145deg,#b4f7a6 0%,#53b96c 55%,#237646 100%)";
+     el.innerHTML='<span style="position:absolute;left:5px;right:5px;top:10px;height:4px;background:#eaffdf;border-radius:4px;display:block"></span>';
+   }
+ }
+ $("scene").appendChild(el);
+ objects.push({el,type,lane:laneN,y:-55,hit:false});
+}
+function loop(now){
+ if(!running)return;
+ const dt=Math.min(.05,(now-lastFrame)/1000);lastFrame=now;elapsed+=dt;
+ const remaining=timeLimit-elapsed;
+ $("timeVal").textContent=fmt(remaining);$("progress").style.width=Math.min(100,elapsed/timeLimit*100)+"%";
+ // Falling objects visibly travel from the top to the player's collection zone.
+ const speed=135+elapsed*1.15;
+ if(now-lastCoin>Math.max(320,760-elapsed*1.25)){spawn("coin");lastCoin=now}
+ if(now-lastObstacle>Math.max(420,900-elapsed*1.2)){spawn(Math.random()<.5?"rock":"rubbish");lastObstacle=now}
+ objects=objects.filter(o=>{
+  o.y+=speed*dt;
+  o.el.style.top=o.y+"px";
+  const bottom=$("scene").clientHeight;
+  if(o.y>bottom+60){o.el.remove();return false}
+  if(!o.hit&&o.y>bottom*.73&&o.y<bottom*.87&&o.lane===lane){
+   o.hit=true;
+   if(o.type==="coin"){coins++;score+=10;$("coinVal").textContent=score;o.el.remove();return false}
+   hits++;score=Math.max(0,score-2);$("coinVal").textContent=score;$("roundVal").textContent=hits;
+   $("statusChip").textContent="−2 POINTS";o.el.remove();
+   setTimeout(()=>{if(running)$("statusChip").textContent="RUNNING"},450);
+   return false;
+  }
+  return true;
+ });
+ if(elapsed>=nextQuizAt && quizIndex<6){openCheckpointQuiz();return}
+ if(elapsed>=timeLimit){finish();return}
+ raf=requestAnimationFrame(loop);
+}
+const quizBank=[
+ {topic:"ACARA OLAHRAGA",q:"Acara manakah memerlukan pelari berlari pantas dalam jarak pendek?",a:["Larian pecut","Lompat tinggi","Lontar peluru"],c:0},
+ {topic:"ACARA OLAHRAGA",q:"Acara manakah menggunakan baton?",a:["Lompat jauh","Lari berganti-ganti","Lempar cakera"],c:1},
+ {topic:"ACARA OLAHRAGA",q:"Dalam acara lompat jauh, peserta mendarat di mana?",a:["Kolam renang","Tilam tinggi","Kawasan pasir"],c:2},
+ {topic:"PERALATAN",q:"Apakah alat yang digunakan dalam acara lari berganti-ganti?",a:["Baton","Cakera","Pita pengukur"],c:0},
+ {topic:"PERALATAN",q:"Apakah alat yang digunakan dalam acara lontar peluru?",a:["Raket","Peluru","Bola sepak"],c:1},
+ {topic:"PERALATAN",q:"Apakah nama palang yang perlu dilepasi dalam acara lompat tinggi?",a:["Baton","Papan lonjak","Palang"],c:2},
+ {topic:"KESELAMATAN",q:"Apakah yang perlu dilakukan sebelum bersukan?",a:["Memanaskan badan","Terus berlari laju","Menolak rakan"],c:0},
+ {topic:"KESELAMATAN",q:"Apakah yang patut dilakukan apabila berasa dahaga semasa bersukan?",a:["Terus berlari tanpa henti","Minum air","Bermain di kawasan lontaran"],c:1},
+ {topic:"KESELAMATAN",q:"Semasa rakan melontar cakera, di manakah kita perlu berada?",a:["Di hadapan rakan","Di dalam kawasan lontaran","Di luar kawasan lontaran yang selamat"],c:2},
+ {topic:"PERATURAN ASAS",q:"Bilakah pelari patut mula berlari dalam perlumbaan?",a:["Selepas menerima isyarat mula","Sebelum arahan mula","Apabila penonton menjerit"],c:0},
+ {topic:"PERATURAN ASAS",q:"Apakah kemahiran penting dalam acara lari berganti-ganti?",a:["Menendang baton","Menyerahkan baton kepada rakan","Melempar baton jauh"],c:1},
+ {topic:"PERATURAN ASAS",q:"Apakah yang perlu dilakukan selepas menggunakan peralatan olahraga?",a:["Meninggalkannya di trek","Melemparkannya kepada rakan","Meletakkannya di tempat yang selamat"],c:2}
+];
+function openCheckpointQuiz(){
+ running=false;cancelAnimationFrame(raf);quizIndex=Math.min(quizIndex+1,6);quizCorrect=0;
+ const modal=$("checkpointModal");if(!modal){resumeAfterQuiz();return}
+ const base=((quizIndex-1)*3)%quizBank.length;
+ const picked=[0,1,2].map(i=>quizBank[(base+i)%quizBank.length]);
+ const topic=picked[0].topic;
+ $("checkpointTitle").textContent=`${topic} · CABARAN PIXEL!`;
+ $("checkpointTime").textContent=`${fmt(elapsed)} elapsed`;
+ let qi=0;
+ function render(){
+  const q=picked[qi];$("checkpointCount").textContent=`QUESTION ${qi+1}/3`;
+  $("checkpointQuestion").textContent=q.q;$("checkpointAnswers").innerHTML="";$("checkpointFeedback").textContent="";
+  q.a.forEach((a,i)=>{const b=document.createElement("button");b.className="answer";b.textContent=String.fromCharCode(65+i)+". "+a;b.onclick=()=>{
+   [...$("checkpointAnswers").children].forEach(x=>x.disabled=true);
+   answerLog.push({question:q.q,selected:a,correct:i===q.c,at:Math.round(elapsed)});if(i===q.c){quizCorrect++;b.classList.add("correct");$("checkpointFeedback").textContent="Betul! Bagus!";}
+   else{b.classList.add("wrong");$("checkpointAnswers").children[q.c].classList.add("correct");$("checkpointFeedback").textContent="Cuba lagi! Jawapan yang betul ditandakan.";}
+   $("checkpointNext").classList.remove("hidden");$("checkpointNext").textContent=qi===2?"CONTINUE RUNNING →":"NEXT QUESTION →";
+  };$("checkpointAnswers").appendChild(b)});
+  $("checkpointNext").classList.add("hidden");
+ }
+ $("checkpointNext").onclick=()=>{
+  qi++;
+  if(qi<3){render();return}
+  modal.classList.add("hidden");
+  $("statusChip").textContent=quizCorrect===3?"PERFECT!":"RUNNING";
+  if(quizCorrect===3){$("runner").classList.add("dash");setTimeout(()=>$("runner").classList.remove("dash"),1500)}
+  resumeAfterQuiz();
+ };
+ modal.classList.remove("hidden");render();
+}
+function resumeAfterQuiz(){
+ nextQuizAt+=45;running=true;lastFrame=performance.now();raf=requestAnimationFrame(loop);
+}
+function finish(){
+ if(!running)return;running=false;cancelAnimationFrame(raf);
+ $("finalCoins").textContent=score;$("finalTime").textContent=fmt(elapsed);$("finalRounds").textContent=hits;
+ $("resultMessage").textContent=`${player}, you scored ${score} points and collected ${coins} coins in ${fmt(elapsed)}!`;
+ saveCloudRecord({name:player,score:score,elapsed:Math.round(elapsed),answers:answerLog,createdAt:Date.now()}).catch(err=>console.error("Could not save game record",err));show("results");
+}
+$("startBtn").addEventListener("click",start);$("againBtn").addEventListener("click",()=>{show("home");$("playerName").value=player});$("leftBtn").addEventListener("click",()=>move(-1));$("rightBtn").addEventListener("click",()=>move(1));$("teacherLoginBtn").addEventListener("click", async () => {
+ try { $("teacherStatus").textContent="Signing in…"; await teacherLogin(); $("teacherEmailLabel").textContent="Signed in as "+auth.currentUser.email; show("teacherDashboard"); $("teacherStatus").textContent="Teacher signed in."; }
+ catch(err) { console.error(err); $("teacherStatus").textContent=err.message || "Teacher sign-in failed."; alert(err.message || "Teacher sign-in failed."); }
+});
+$("refreshTeacherBtn").addEventListener("click", async () => { try { await loadTeacherRecords(); } catch(err) { alert(err.message); } });
+$("teacherLogoutBtn").addEventListener("click", async () => { await signOut(auth); await signInAnonymously(auth); show("home"); $("teacherStatus").textContent="Signed out. Students can play without email or password."; });
+$("backToGameBtn").addEventListener("click", () => show("home"));
+document.addEventListener("keydown",e=>{if(e.key==="ArrowLeft"||e.key.toLowerCase()==="a")move(-1);if(e.key==="ArrowRight"||e.key.toLowerCase()==="d")move(1)});
+let touchX=null; $("scene").addEventListener("touchstart",e=>{touchX=e.changedTouches[0].clientX},{passive:true});$("scene").addEventListener("touchend",e=>{if(touchX===null)return;const dx=e.changedTouches[0].clientX-touchX;if(Math.abs(dx)>28)move(dx<0?-1:1);touchX=null},{passive:true});
+})();
+</script>
+</body></html>
