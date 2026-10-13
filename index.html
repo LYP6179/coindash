@@ -50,7 +50,7 @@ button:active{transform:translateY(2px);box-shadow:0 2px 0 #080d20}
 </style>
 </head>
 <body><main class="app">
-<header><div class="logo">⚡ COIN <span>DASH</span></div><div class="tag">OLAHRAGA QUEST</div></header>
+<header><div class="logo">⚡ COIN <span>DASH</span></div><div style="display:flex;align-items:center;gap:6px"><div class="tag">OLAHRAGA QUEST</div><button id="soundToggle" class="secondary" type="button" style="padding:7px 9px;font-size:.72rem">🔊 SOUND ON</button></div></header>
 <section id="home">
   <h1>LARI PANTAS.<br><em>FIKIR PANTAS!</em></h1>
   <p>Kutip syiling, elak halangan dan jawab soalan pengetahuan Olahraga. Sejauh manakah anda boleh pergi dalam 5 minit?</p>
@@ -201,6 +201,31 @@ onAuthStateChanged(auth, user => {
 });
 (() => {
 const $ = id => document.getElementById(id);
+let soundEnabled=true, audioCtx=null;
+function playSfx(kind){
+ if(!soundEnabled)return;
+ try{
+  const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;
+  if(!audioCtx)audioCtx=new Ctx();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  const now=audioCtx.currentTime;
+  const patterns={
+   coin:[[880,0,.07,'square'],[1320,.055,.09,'square']],
+   hit:[[190,0,.12,'sawtooth'],[115,.07,.14,'square']],
+   correct:[[660,0,.08,'square'],[880,.08,.08,'square'],[1100,.16,.12,'square']],
+   wrong:[[260,0,.13,'triangle'],[190,.1,.18,'triangle']],
+   start:[[440,0,.08,'square'],[660,.08,.08,'square'],[880,.16,.15,'square']],
+   finish:[[523,0,.12,'square'],[659,.12,.12,'square'],[784,.24,.12,'square'],[1046,.36,.22,'square']],
+   move:[[420,0,.045,'square']]
+  };
+  (patterns[kind]||[]).forEach(([freq,delay,duration,wave])=>{
+   const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+   osc.type=wave;osc.frequency.setValueAtTime(freq,now+delay);
+   gain.gain.setValueAtTime(.0001,now+delay);gain.gain.exponentialRampToValueAtTime(.075,now+delay+.008);gain.gain.exponentialRampToValueAtTime(.0001,now+delay+duration);
+   osc.connect(gain);gain.connect(audioCtx.destination);osc.start(now+delay);osc.stop(now+delay+duration+.015);
+  });
+ }catch(e){console.debug('Sound effect unavailable',e)}
+}
 let player="",coins=0,score=0,hits=0,lane=1,elapsed=0,timeLimit=300,running=false,raf=0,lastFrame=0,lastCoin=0,lastObstacle=0,objects=[],nextQuizAt=45,quizIndex=0,quizCorrect=0;
 const laneX=[25,50,75];
 function show(id){["home","game","results","teacherDashboard"].forEach(s=>$(s).classList.toggle("hidden",s!==id))}
@@ -216,7 +241,7 @@ async function start(){
  $("scene").querySelectorAll(".coin,.rock,.rubbish").forEach(n=>n.remove());
  show("game");cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);
 }
-function move(dir){if(!running)return;lane=Math.max(0,Math.min(2,lane+dir));$("runner").style.left=laneX[lane]+"%"}
+function move(dir){if(!running)return;const oldLane=lane;lane=Math.max(0,Math.min(2,lane+dir));if(lane!==oldLane)playSfx("move");$("runner").style.left=laneX[lane]+"%"}
 function spawn(type){
  const laneN=Math.floor(Math.random()*3),el=document.createElement("div");
  el.className=type;el.dataset.lane=laneN;
@@ -264,8 +289,8 @@ function loop(now){
   if(o.y>bottom+60){o.el.remove();return false}
   if(!o.hit&&o.y>bottom*.73&&o.y<bottom*.87&&o.lane===lane){
    o.hit=true;
-   if(o.type==="coin"){coins++;score+=10;$("coinVal").textContent=score;o.el.remove();return false}
-   hits++;score=Math.max(0,score-2);$("coinVal").textContent=score;$("roundVal").textContent=hits;
+   if(o.type==="coin"){coins++;score+=10;playSfx("coin");$("coinVal").textContent=score;o.el.remove();return false}
+   hits++;score=Math.max(0,score-2);playSfx("hit");$("coinVal").textContent=score;$("roundVal").textContent=hits;
    $("statusChip").textContent="−2 POINTS";o.el.remove();
    setTimeout(()=>{if(running)$("statusChip").textContent="RUNNING"},450);
    return false;
@@ -304,8 +329,8 @@ function openCheckpointQuiz(){
   $("checkpointQuestion").textContent=q.q;$("checkpointAnswers").innerHTML="";$("checkpointFeedback").textContent="";
   q.a.forEach((a,i)=>{const b=document.createElement("button");b.className="answer";b.textContent=String.fromCharCode(65+i)+". "+a;b.onclick=()=>{
    [...$("checkpointAnswers").children].forEach(x=>x.disabled=true);
-   if(i===q.c){quizCorrect++;b.classList.add("correct");$("checkpointFeedback").textContent="Betul! Bagus!";}
-   else{b.classList.add("wrong");$("checkpointAnswers").children[q.c].classList.add("correct");$("checkpointFeedback").textContent="Cuba lagi! Jawapan yang betul ditandakan.";}
+   if(i===q.c){quizCorrect++;playSfx("correct");b.classList.add("correct");$("checkpointFeedback").textContent="Betul! Bagus!";}
+   else{playSfx("wrong");b.classList.add("wrong");$("checkpointAnswers").children[q.c].classList.add("correct");$("checkpointFeedback").textContent="Cuba lagi! Jawapan yang betul ditandakan.";}
    $("checkpointNext").classList.remove("hidden");$("checkpointNext").textContent=qi===2?"CONTINUE RUNNING →":"NEXT QUESTION →";
   };$("checkpointAnswers").appendChild(b)});
   $("checkpointNext").classList.add("hidden");
@@ -327,8 +352,13 @@ function finish(){
  if(!running)return;running=false;cancelAnimationFrame(raf);
  $("finalCoins").textContent=score;$("finalTime").textContent=fmt(elapsed);$("finalRounds").textContent=hits;
  $("resultMessage").textContent=`${player}, you scored ${score} points and collected ${coins} coins in ${fmt(elapsed)}!`;
- saveCloudRecord({name:player,score:score,elapsed:Math.round(elapsed),createdAt:Date.now()}).catch(err=>console.error("Could not save game record",err));show("results");
+ playSfx("finish");saveCloudRecord({name:player,score:score,elapsed:Math.round(elapsed),createdAt:Date.now()}).catch(err=>console.error("Could not save game record",err));show("results");
 }
+$("soundToggle").addEventListener("click",()=>{
+ soundEnabled=!soundEnabled;
+ $("soundToggle").textContent=soundEnabled?"🔊 SOUND ON":"🔇 SOUND OFF";
+ if(soundEnabled)playSfx("start");
+});
 $("startBtn").addEventListener("click",start);$("againBtn").addEventListener("click",()=>{show("home");$("playerName").value=player});$("leftBtn").addEventListener("click",()=>move(-1));$("rightBtn").addEventListener("click",()=>move(1));$("teacherLoginBtn").addEventListener("click", async () => {
  try { $("teacherStatus").textContent="Signing in…"; await teacherLogin(); $("teacherEmailLabel").textContent="Signed in as "+auth.currentUser.email; show("teacherDashboard"); $("teacherStatus").textContent="Teacher signed in."; }
  catch(err) { console.error(err); $("teacherStatus").textContent=err.message || "Teacher sign-in failed."; alert(err.message || "Teacher sign-in failed."); }
